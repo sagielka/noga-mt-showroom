@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="noga_black">#FF000000</color>
+    <color name="noga_bg">#FF0E0F12</color>
+    <color name="noga_surface">#FF17191E</color>
+    <color name="noga_surface_focus">#FF23262D</color>
+    <color name="noga_divider">#FF2C3038</color>
+    <color name="noga_orange">#FFFF6A00</color>
+    <color name="noga_orange_dim">#FFB34A00</color>
+    <color name="noga_text">#FFF2F3F5</color>
+    <color name="noga_text_dim">#FF9AA1AC</color>
+    <color name="noga_green">#FF3DDC84</color>
+    <color name="noga_red">#FFFF4D4D</color>
+    <color name="noga_scrim">#CC000000</color>
+</resources>

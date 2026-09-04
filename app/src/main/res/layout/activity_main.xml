@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/noga_black"
+    android:keepScreenOn="true">
+
+    <!-- The WebView is added at runtime so it can be destroyed and rebuilt
+         after a renderer crash without leaking the old instance. -->
+    <FrameLayout
+        android:id="@+id/web_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/noga_black" />
+
+    <!-- HTML5 fullscreen video target (WebChromeClient custom view) -->
+    <FrameLayout
+        android:id="@+id/fullscreen_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/noga_black"
+        android:visibility="gone" />
+
+    <!-- Native local playback surface (Media3) -->
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/player_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/noga_black"
+        android:visibility="gone"
+        app:resize_mode="fit"
+        app:use_controller="false"
+        app:surface_type="surface_view" />
+
+    <!-- Branded offline / recovery screen -->
+    <LinearLayout
+        android:id="@+id/offline_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/noga_black"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/tv_safe_horizontal"
+        android:paddingEnd="@dimen/tv_safe_horizontal"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:letterSpacing="0.22"
+            android:text="@string/offline_brand"
+            android:textColor="@color/noga_orange"
+            android:textSize="56sp"
+            android:textStyle="bold" />
+
+        <View
+            android:layout_width="140dp"
+            android:layout_height="4dp"
+            android:layout_marginTop="14dp"
+            android:layout_marginBottom="26dp"
+            android:background="@drawable/accent_bar" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:letterSpacing="0.08"
+            android:text="@string/offline_title"
+            android:textColor="@color/noga_text"
+            android:textSize="26sp" />
+
+        <TextView
+            android:id="@+id/offline_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="@string/offline_message"
+            android:textColor="@color/noga_text_dim"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/offline_detail"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/noga_text_dim"
+            android:textSize="15sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="46dp"
+            android:alpha="0.6"
+            android:text="@string/offline_hint"
+            android:textColor="@color/noga_text_dim"
+            android:textSize="14sp" />
+    </LinearLayout>
+</FrameLayout>

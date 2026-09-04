@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- TV overscan safe area: 5% horizontal / 5% vertical is the Android TV guideline -->
+    <dimen name="tv_safe_horizontal">48dp</dimen>
+    <dimen name="tv_safe_vertical">27dp</dimen>
+</resources>

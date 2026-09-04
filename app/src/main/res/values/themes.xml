@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.NogaMT.Fullscreen" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/noga_black</item>
+        <item name="android:colorBackground">@color/noga_black</item>
+        <item name="colorAccent">@color/noga_orange</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowContentTransitions">false</item>
+    </style>
+
+    <style name="Theme.NogaMT.Staff" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/noga_bg</item>
+        <item name="android:colorBackground">@color/noga_bg</item>
+        <item name="colorAccent">@color/noga_orange</item>
+        <item name="android:textColorPrimary">@color/noga_text</item>
+        <item name="android:textColorSecondary">@color/noga_text_dim</item>
+        <item name="alertDialogTheme">@style/Theme.NogaMT.Dialog</item>
+        <item name="android:alertDialogTheme">@style/Theme.NogaMT.Dialog</item>
+    </style>
+
+    <style name="Theme.NogaMT.Dialog" parent="Theme.AppCompat.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/bg_dialog</item>
+        <item name="colorAccent">@color/noga_orange</item>
+        <item name="android:textColorPrimary">@color/noga_text</item>
+        <item name="android:textColorSecondary">@color/noga_text_dim</item>
+        <item name="android:windowMinWidthMajor">55%</item>
+        <item name="android:windowMinWidthMinor">70%</item>
+    </style>
+
+    <!-- Widget styles -->
+    <style name="NogaSectionLabel">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/noga_orange</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:letterSpacing">0.14</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:paddingTop">20dp</item>
+        <item name="android:paddingBottom">6dp</item>
+    </style>
+
+    <style name="NogaValue">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/noga_text</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:paddingTop">2dp</item>
+        <item name="android:paddingBottom">2dp</item>
+    </style>
+
+    <style name="NogaCaption">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/noga_text_dim</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="NogaButton" parent="Widget.AppCompat.Button.Borderless">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/bg_focusable</item>
+        <item name="android:textColor">@color/noga_text</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingStart">18dp</item>
+        <item name="android:paddingEnd">18dp</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:focusable">true</item>
+        <item name="android:focusableInTouchMode">false</item>
+    </style>
+
+    <style name="NogaSwitch" parent="Widget.AppCompat.CompoundButton.Switch">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/bg_focusable</item>
+        <item name="android:textColor">@color/noga_text</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="android:paddingStart">18dp</item>
+        <item name="android:paddingEnd">18dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:focusable">true</item>
+    </style>
+</resources>
