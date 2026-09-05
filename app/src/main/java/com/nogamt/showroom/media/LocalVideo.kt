@@ -11,17 +11,24 @@ data class LocalVideo(
     val fileName: String,
     val sizeBytes: Long,
     val lastModified: Long,
-    val matchType: MatchType
+    val matchType: MatchType,
+    /** Manifest version this copy came from, 0 when it was copied in manually. */
+    val version: Long = 0L,
+    val sha256: String? = null
 ) {
+    /** Sent to JavaScript - deliberately carries no URI and no path. */
     fun toJson(): JSONObject = JSONObject()
         .put("id", id)
         .put("fileName", fileName)
         .put("sizeBytes", sizeBytes)
         .put("lastModified", lastModified)
         .put("matchType", matchType.name)
+        .put("version", version)
 
-    /** Includes the content URI. Only ever used for staff diagnostics, never sent to JS. */
-    fun toStorageJson(): JSONObject = toJson().put("uri", uri)
+    /** Includes the storage URI. Persisted locally, never exposed to the web app. */
+    fun toStorageJson(): JSONObject = toJson()
+        .put("uri", uri)
+        .put("sha256", sha256 ?: JSONObject.NULL)
 
     companion object {
         fun fromJson(o: JSONObject): LocalVideo? {
@@ -35,7 +42,9 @@ data class LocalVideo(
                 lastModified = o.optLong("lastModified", 0L),
                 matchType = runCatching {
                     MatchType.valueOf(o.optString("matchType", MatchType.FILENAME_ID.name))
-                }.getOrDefault(MatchType.FILENAME_ID)
+                }.getOrDefault(MatchType.FILENAME_ID),
+                version = o.optLong("version", 0L),
+                sha256 = if (o.isNull("sha256")) null else o.optString("sha256").ifBlank { null }
             )
         }
     }

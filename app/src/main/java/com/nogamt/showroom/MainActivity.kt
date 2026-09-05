@@ -1,6 +1,7 @@
 package com.nogamt.showroom
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -31,7 +32,9 @@ import com.nogamt.showroom.bridge.NogaBridge
 import com.nogamt.showroom.media.LocalPlayerController
 import com.nogamt.showroom.media.MediaIndex
 import com.nogamt.showroom.media.MediaRepository
+import com.nogamt.showroom.media.SyncEngine
 import com.nogamt.showroom.net.NetworkMonitor
+import com.nogamt.showroom.staff.FirstRunSetupActivity
 import com.nogamt.showroom.staff.MediaManagerActivity
 import com.nogamt.showroom.staff.StaffSettingsActivity
 import com.nogamt.showroom.web.ShowroomWebChromeClient
@@ -80,6 +83,15 @@ class MainActivity : AppCompatActivity(),
 
     private var backLongPressFired = false
     private var staffMenu: AlertDialog? = null
+    private lateinit var rotateOverlay: View
+
+    /** Periodic background manifest check. Never touches what is on screen. */
+    private val periodicSyncRunnable = object : Runnable {
+        override fun run() {
+            MediaRepository.syncNow(this@MainActivity, force = false)
+            handler.postDelayed(this, Constants.SYNC_INTERVAL_MS)
+        }
+    }
 
     private val retryRunnable = Runnable { attemptRecoveryLoad() }
 
@@ -108,6 +120,7 @@ class MainActivity : AppCompatActivity(),
         fullscreenContainer = findViewById(R.id.fullscreen_container)
         playerView = findViewById(R.id.player_view)
         offlineOverlay = findViewById(R.id.offline_overlay)
+        rotateOverlay = findViewById(R.id.rotate_overlay)
         offlineStatus = findViewById(R.id.offline_status)
         offlineDetail = findViewById(R.id.offline_detail)
 
@@ -120,9 +133,23 @@ class MainActivity : AppCompatActivity(),
         buildWebView()
         loadStartUrl(force = false)
 
-        // Confirm the media source is still reachable; this also rescans it when it is,
-        // so the cached index picks up any videos copied on while the app was closed.
-        MediaRepository.verifySourceAvailability(this)
+        applyOrientationState(resources.configuration)
+
+        // Startup order matters: the showroom is already on screen by now. Storage checks and
+        // downloads happen in the background and never delay the first frame.
+        MediaRepository.verifySourceAvailability(this) {
+            if (MediaRepository.hasStorage(this)) MediaRepository.syncNow(this, force = false)
+        }
+        handler.postDelayed(periodicSyncRunnable, Constants.SYNC_INTERVAL_MS)
+
+        if (!prefs.firstRunCompleted) {
+            // Offer PREPARE OFFLINE MEDIA once, after the web UI has started loading.
+            handler.postDelayed({
+                if (!isFinishing && !prefs.firstRunCompleted) {
+                    staffLauncher.launch(Intent(this, FirstRunSetupActivity::class.java))
+                }
+            }, 2500L)
+        }
 
         if (intent?.getBooleanExtra(EXTRA_FROM_BOOT, false) == true) {
             Log.i(Constants.LOG, "Launched by BootReceiver")
@@ -148,6 +175,23 @@ class MainActivity : AppCompatActivity(),
             systemBarsBehavior =
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        applyOrientationState(newConfig)
+        enterImmersive()
+    }
+
+    /**
+     * Landscape is the primary mode. In portrait (a phone or tablet used for bench testing)
+     * the web UI is hidden behind a branded notice; the WebView keeps its state, so rotating
+     * back restores exactly the page the visitor was on.
+     */
+    private fun applyOrientationState(config: Configuration) {
+        val portrait = config.orientation == Configuration.ORIENTATION_PORTRAIT
+        rotateOverlay.visibility = if (portrait) View.VISIBLE else View.GONE
+        if (portrait && player?.isActive == true) player?.pause() else if (!portrait) player?.resume()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -192,6 +236,7 @@ class MainActivity : AppCompatActivity(),
     private fun destroyWebView() {
         val wv = webView ?: return
         webView = null
+        bridgeReady = false
         runCatching {
             wv.stopLoading()
             wv.webChromeClient = null
@@ -275,7 +320,10 @@ class MainActivity : AppCompatActivity(),
             handler.removeCallbacks(retryRunnable)
             handler.postDelayed(retryRunnable, 1200L)
         }
-        if (!online) {
+        if (online) {
+            // Network came back: quietly catch up on media in the background.
+            MediaRepository.syncNow(this, force = false)
+        } else {
             Log.w(Constants.LOG, "Offline - keeping current UI, local media still playable")
         }
     }
@@ -289,6 +337,7 @@ class MainActivity : AppCompatActivity(),
     override fun onPageLoadFinished(url: String) {
         Log.i(Constants.LOG, "Page ready: $url")
         contentReady = true
+        bridgeReady = bridge != null
         retryAttempt = 0
         handler.removeCallbacks(retryRunnable)
         hideOffline()
@@ -355,6 +404,7 @@ class MainActivity : AppCompatActivity(),
             return false
         }
         webContainer.visibility = View.VISIBLE
+        SyncEngine.currentlyPlayingId = video.id
         return player?.play(video) ?: false
     }
 
@@ -368,7 +418,8 @@ class MainActivity : AppCompatActivity(),
 
     override fun bridgeRefreshMediaIndex() {
         MediaRepository.rescan(this) {
-            toast("Media index refreshed: ${MediaIndex.matchedCount} videos")
+            Log.i(Constants.LOG, "Media index refreshed: ${MediaIndex.matchedCount} videos")
+            MediaRepository.syncNow(this, force = true)
         }
     }
 
@@ -397,6 +448,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     private fun afterPlaybackFinished() {
+        SyncEngine.currentlyPlayingId = null
         if (pendingReload) {
             pendingReload = false
             handler.postDelayed({ reloadWebApp(force = false) }, 400L)
@@ -532,7 +584,9 @@ class MainActivity : AppCompatActivity(),
             Log.i(Constants.LOG, "Away for ${away / 1000}s - refreshing web app")
             reloadWebApp(force = false)
         }
-        MediaRepository.verifySourceAvailability(this)
+        MediaRepository.verifySourceAvailability(this) {
+            MediaRepository.syncNow(this, force = false)
+        }
     }
 
     override fun onPause() {
@@ -544,7 +598,9 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onDestroy() {
+        handler.removeCallbacks(periodicSyncRunnable)
         handler.removeCallbacksAndMessages(null)
+        SyncEngine.currentlyPlayingId = null
         staffMenu?.dismiss()
         staffMenu = null
         networkMonitor.stop()
@@ -555,6 +611,11 @@ class MainActivity : AppCompatActivity(),
     }
 
     companion object {
+        /** Read by the staff screens for the ANDROID BRIDGE / READY diagnostic. */
+        @Volatile
+        var bridgeReady: Boolean = false
+            private set
+
         const val EXTRA_FROM_BOOT = "com.nogamt.showroom.FROM_BOOT"
         const val EXTRA_STAFF_ACTION = "com.nogamt.showroom.STAFF_ACTION"
         const val ACTION_RELOAD = "reload"

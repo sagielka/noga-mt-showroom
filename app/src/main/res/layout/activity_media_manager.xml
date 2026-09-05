@@ -32,6 +32,15 @@
             android:textSize="24sp"
             android:textStyle="bold" />
 
+        <TextView
+            android:id="@+id/value_health"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="14dp"
+            android:textColor="@color/noga_green"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
         <ProgressBar
             android:id="@+id/progress"
             style="?android:attr/progressBarStyleSmall"
@@ -43,8 +52,14 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="10dp"
         android:background="@color/noga_divider" />
+
+    <TextView
+        android:id="@+id/value_sync_banner"
+        style="@style/NogaValue"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/noga_orange" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -52,10 +67,11 @@
         android:layout_weight="1"
         android:orientation="horizontal">
 
+        <!-- LEFT: source + counters -->
         <ScrollView
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1.15"
+            android:layout_weight="1.3"
             android:paddingEnd="24dp"
             android:scrollbars="none">
 
@@ -66,28 +82,39 @@
 
                 <TextView style="@style/NogaSectionLabel" android:text="@string/media_source" />
                 <TextView android:id="@+id/value_source" style="@style/NogaValue" />
-                <TextView android:id="@+id/value_source_state" style="@style/NogaCaption" />
 
-                <TextView style="@style/NogaSectionLabel" android:text="@string/media_found" />
-                <TextView android:id="@+id/value_found" style="@style/NogaValue" />
+                <TextView style="@style/NogaSectionLabel" android:text="@string/media_permission" />
+                <TextView android:id="@+id/value_permission" style="@style/NogaValue" />
 
-                <TextView style="@style/NogaSectionLabel" android:text="@string/media_matched" />
-                <TextView android:id="@+id/value_matched" style="@style/NogaValue" />
+                <TextView style="@style/NogaSectionLabel" android:text="@string/media_source" />
+                <TextView android:id="@+id/value_source_state" style="@style/NogaValue" />
 
-                <TextView style="@style/NogaSectionLabel" android:text="@string/media_unmatched" />
-                <TextView android:id="@+id/value_unmatched" style="@style/NogaValue" />
+                <TextView
+                    android:id="@+id/value_counters"
+                    style="@style/NogaValue"
+                    android:layout_marginTop="18dp"
+                    android:fontFamily="monospace"
+                    android:lineSpacingExtra="3dp"
+                    android:textSize="16sp" />
 
-                <TextView style="@style/NogaSectionLabel" android:text="@string/media_duplicates" />
-                <TextView android:id="@+id/value_duplicates" style="@style/NogaValue" />
+                <TextView
+                    android:id="@+id/value_storage_line"
+                    style="@style/NogaValue"
+                    android:layout_marginTop="16dp"
+                    android:fontFamily="monospace"
+                    android:lineSpacingExtra="3dp"
+                    android:textSize="16sp" />
 
-                <TextView style="@style/NogaSectionLabel" android:text="@string/media_storage" />
-                <TextView android:id="@+id/value_storage" style="@style/NogaValue" />
-
-                <TextView style="@style/NogaSectionLabel" android:text="@string/media_last_scan" />
-                <TextView android:id="@+id/value_last_scan" style="@style/NogaValue" />
+                <TextView
+                    android:id="@+id/value_low_storage"
+                    style="@style/NogaValue"
+                    android:layout_marginTop="10dp"
+                    android:textColor="@color/noga_red"
+                    android:visibility="gone" />
             </LinearLayout>
         </ScrollView>
 
+        <!-- RIGHT: actions -->
         <ScrollView
             android:layout_width="0dp"
             android:layout_height="match_parent"
@@ -101,19 +128,25 @@
 
                 <TextView style="@style/NogaSectionLabel" android:text="@string/section_actions" />
 
-                <Button android:id="@+id/btn_select_folder" style="@style/NogaButton" android:text="@string/btn_select_media_folder" />
+                <Button android:id="@+id/btn_sync_now" style="@style/NogaButton" android:text="@string/action_sync_now" />
                 <Button android:id="@+id/btn_rescan" style="@style/NogaButton" android:text="@string/btn_rescan_videos" />
+                <Button android:id="@+id/btn_change_storage" style="@style/NogaButton" android:text="@string/action_change_storage" />
                 <Button android:id="@+id/btn_view_matched" style="@style/NogaButton" android:text="@string/btn_view_matched" />
                 <Button android:id="@+id/btn_view_missing" style="@style/NogaButton" android:text="@string/btn_view_missing" />
+                <Button android:id="@+id/btn_view_failed" style="@style/NogaButton" android:text="@string/btn_view_failed" />
                 <Button android:id="@+id/btn_view_unmatched" style="@style/NogaButton" android:text="@string/btn_view_unmatched" />
+                <Button android:id="@+id/btn_view_duplicates" style="@style/NogaButton" android:text="@string/media_duplicates" />
+                <Button android:id="@+id/btn_clean_unused" style="@style/NogaButton" android:text="@string/btn_clean_unused" />
+                <Button android:id="@+id/btn_test_local" style="@style/NogaButton" android:text="@string/btn_test_local" />
+                <Button android:id="@+id/btn_test_by_id" style="@style/NogaButton" android:text="@string/btn_test_by_id" />
                 <Button android:id="@+id/btn_clear_index" style="@style/NogaButton" android:text="@string/btn_clear_index" />
                 <Button android:id="@+id/btn_close" style="@style/NogaButton" android:text="@string/btn_close" />
 
                 <TextView
                     style="@style/NogaCaption"
-                    android:layout_marginTop="18dp"
+                    android:layout_marginTop="16dp"
                     android:alpha="0.7"
-                    android:text="Expected layout on the drive:\nNOGA-MT/videos/*.mp4\n\nClearing the index never deletes media files." />
+                    android:text="Expected drive layout: NOGA-MT/videos/*.mp4\nClearing the index never deletes media files." />
             </LinearLayout>
         </ScrollView>
     </LinearLayout>

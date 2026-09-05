@@ -14,8 +14,8 @@ android {
         applicationId = "com.nogamt.showroom"
         minSdk = 26          // Android 8.0 - covers essentially every Android TV in the field
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
 
         // No test runner wired in: this is a kiosk shell, verification is manual (see README).
         resourceConfigurations += listOf("en")

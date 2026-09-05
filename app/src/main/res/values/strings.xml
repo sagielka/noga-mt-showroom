@@ -67,4 +67,51 @@
     <string name="clear_index_message">This clears only the local index inside the app. No video files on the TV or USB drive are deleted.</string>
     <string name="scanning">Scanning…</string>
     <string name="none_found">Nothing to show.</string>
+
+    <!-- v1.1: first-run setup -->
+    <string name="first_run_title">Prepare Offline Media</string>
+    <string name="first_run_intro">Choose where NOGA MT Showroom should keep its local video library. The library is downloaded automatically and kept up to date. You can change this later in Staff Settings.</string>
+    <string name="first_run_internal">INTERNAL STORAGE</string>
+    <string name="first_run_internal_hint">Managed by the app. Nothing to plug in. Removed if the app is uninstalled.</string>
+    <string name="first_run_usb">USB / EXTERNAL STORAGE</string>
+    <string name="first_run_usb_hint">Pick the NOGA-MT/videos folder on a USB drive or SD card. The permission is remembered.</string>
+    <string name="first_run_skip">SKIP FOR NOW</string>
+    <string name="first_run_skip_hint">The showroom runs online only. Offline media can be set up any time from the staff menu.</string>
+
+    <!-- v1.1: media sync -->
+    <string name="section_sync">MEDIA SYNC</string>
+    <string name="section_health">TV MEDIA HEALTH</string>
+    <string name="label_auto_sync">Auto-sync new videos</string>
+    <string name="label_wifi_only">Sync on Wi-Fi / Ethernet only</string>
+    <string name="label_verify">Verify downloaded files</string>
+    <string name="action_sync_now">SYNC NOW</string>
+    <string name="action_change_storage">CHANGE STORAGE</string>
+    <string name="action_manifest_url">Change Manifest URL</string>
+    <string name="btn_view_failed">VIEW FAILED DOWNLOADS</string>
+    <string name="btn_clean_unused">CLEAN UNUSED MEDIA</string>
+    <string name="btn_test_local">TEST LOCAL VIDEO</string>
+    <string name="btn_test_by_id">TEST VIDEO BY ID</string>
+    <string name="btn_retry_failed">RETRY FAILED DOWNLOADS</string>
+
+    <string name="media_permission">SAF PERMISSION</string>
+    <string name="media_remote">REMOTE LIBRARY</string>
+    <string name="media_ready">LOCAL READY</string>
+    <string name="media_missing">MISSING</string>
+    <string name="media_update">UPDATE AVAILABLE</string>
+    <string name="media_downloading">DOWNLOADING</string>
+    <string name="media_failed">FAILED</string>
+    <string name="media_unused">UNUSED</string>
+    <string name="media_free">STORAGE FREE</string>
+    <string name="media_last_sync">LAST SYNC</string>
+    <string name="media_sync_status">SYNC STATUS</string>
+
+    <!-- v1.1: native playback test -->
+    <string name="test_title">Native Playback Test</string>
+    <string name="test_hint">Media3 / ExoPlayer only · no WebView, no Lovable, no YouTube</string>
+    <string name="test_by_id_title">Test video by ID</string>
+    <string name="test_by_id_hint">Enter a video ID, e.g. N-mTagRbXuM</string>
+
+    <!-- v1.1: portrait notice -->
+    <string name="rotate_title">Please rotate your device</string>
+    <string name="rotate_message">NOGA MT Navigator is optimized for landscape viewing</string>
 </resources>

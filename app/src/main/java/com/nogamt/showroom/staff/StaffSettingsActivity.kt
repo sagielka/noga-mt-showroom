@@ -5,13 +5,11 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.util.Log
 import android.util.Patterns
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
@@ -21,30 +19,22 @@ import com.nogamt.showroom.Constants
 import com.nogamt.showroom.MainActivity
 import com.nogamt.showroom.Prefs
 import com.nogamt.showroom.R
+import com.nogamt.showroom.StorageMode
 import com.nogamt.showroom.media.MediaIndex
 import com.nogamt.showroom.media.MediaRepository
 import com.nogamt.showroom.media.MediaScanner
+import com.nogamt.showroom.media.MediaState
+import com.nogamt.showroom.media.SyncEngine
+import com.nogamt.showroom.media.SyncProgress
 import com.nogamt.showroom.net.NetworkMonitor
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class StaffSettingsActivity : AppCompatActivity() {
+class StaffSettingsActivity : AppCompatActivity(), SyncEngine.Listener {
 
     private lateinit var prefs: Prefs
     private lateinit var networkMonitor: NetworkMonitor
-
-    private val folderPicker =
-        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
-            if (uri == null) return@registerForActivityResult
-            if (MediaRepository.adoptFolder(this, uri)) {
-                toast("Folder selected · scanning…")
-                MediaRepository.rescan(this) { render() }
-            } else {
-                toast("Could not keep permission for that folder")
-            }
-            render()
-        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,36 +54,45 @@ class StaffSettingsActivity : AppCompatActivity() {
             isChecked = prefs.autoStartOnBoot
             setOnCheckedChangeListener { _, checked ->
                 prefs.autoStartOnBoot = checked
-                if (checked) {
-                    AlertDialog.Builder(this@StaffSettingsActivity, R.style.Theme_NogaMT_Dialog)
-                        .setTitle("Auto start enabled")
-                        .setMessage(
-                            "The app will try to launch itself after the TV boots.\n\n" +
-                                "Some manufacturers (Google TV, parts of the Sony/Philips/Amazon " +
-                                "range) block apps from opening themselves at boot. If it does " +
-                                "not start on this TV, provision the device in kiosk mode - " +
-                                "see docs/KIOSK.md."
-                        )
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show()
-                }
+                if (checked) showAutoStartCaveat()
             }
         }
         findViewById<SwitchCompat>(R.id.switch_recovery).apply {
             isChecked = prefs.autoRecovery
             setOnCheckedChangeListener { _, checked -> prefs.autoRecovery = checked }
         }
+        findViewById<SwitchCompat>(R.id.switch_auto_sync).apply {
+            isChecked = prefs.autoSync
+            setOnCheckedChangeListener { _, checked ->
+                prefs.autoSync = checked
+                render()
+            }
+        }
+        findViewById<SwitchCompat>(R.id.switch_wifi_only).apply {
+            isChecked = prefs.wifiOnly
+            setOnCheckedChangeListener { _, checked -> prefs.wifiOnly = checked }
+        }
+        findViewById<SwitchCompat>(R.id.switch_verify).apply {
+            isChecked = prefs.verifyDownloads
+            setOnCheckedChangeListener { _, checked -> prefs.verifyDownloads = checked }
+        }
 
+        findViewById<Button>(R.id.btn_sync_now).setOnClickListener {
+            toast("Checking the media library…")
+            MediaRepository.syncNow(this, force = true) { render() }
+        }
         findViewById<Button>(R.id.btn_reload).setOnClickListener {
             finishWithAction(MainActivity.ACTION_RELOAD)
         }
         findViewById<Button>(R.id.btn_force_refresh).setOnClickListener {
             finishWithAction(MainActivity.ACTION_FORCE_REFRESH)
         }
-        findViewById<Button>(R.id.btn_select_folder).setOnClickListener { launchFolderPicker() }
+        findViewById<Button>(R.id.btn_change_storage).setOnClickListener {
+            startActivity(Intent(this, MediaManagerActivity::class.java))
+        }
         findViewById<Button>(R.id.btn_rescan).setOnClickListener {
-            if (!MediaRepository.hasFolder(this)) {
-                toast("Select a media folder first")
+            if (!MediaRepository.hasStorage(this)) {
+                startActivity(Intent(this, FirstRunSetupActivity::class.java))
             } else {
                 toast(getString(R.string.scanning))
                 MediaRepository.rescan(this) {
@@ -107,84 +106,182 @@ class StaffSettingsActivity : AppCompatActivity() {
         }
         findViewById<Button>(R.id.btn_clear_cache).setOnClickListener { confirmClearCache() }
         findViewById<Button>(R.id.btn_change_url).setOnClickListener { promptStartUrl() }
+        findViewById<Button>(R.id.btn_manifest_url).setOnClickListener { promptManifestUrl() }
         findViewById<Button>(R.id.btn_network_settings).setOnClickListener { openNetworkSettings() }
         findViewById<Button>(R.id.btn_return).setOnClickListener { finishWithAction(null) }
 
-        findViewById<Button>(R.id.btn_reload).requestFocus()
+        findViewById<Button>(R.id.btn_sync_now).requestFocus()
     }
 
+    private fun showAutoStartCaveat() {
+        AlertDialog.Builder(this, R.style.Theme_NogaMT_Dialog)
+            .setTitle("Auto start enabled")
+            .setMessage(
+                "The app will try to launch itself after the TV boots.\n\n" +
+                    "Some manufacturers (Google TV, parts of the Sony/Philips/Amazon range) " +
+                    "block apps from opening themselves at boot. If it does not start on this " +
+                    "TV, provision the device in kiosk mode - see docs/KIOSK.md."
+            )
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
+    // ---------------------------------------------------------------- rendering
+
     private fun render() {
+        val res = MediaIndex.resolution()
+
+        findViewById<TextView>(R.id.value_health).text = buildString {
+            appendLine(row("BRIDGE", if (MainActivity.bridgeReady) "READY" else "NOT READY"))
+            appendLine(row("STORAGE", storageHealth()))
+            appendLine(row("SYNC", MediaIndex.syncProgress.describe()))
+            appendLine(
+                row(
+                    "LOCAL VIDEOS",
+                    "${res.count(MediaState.LOCAL_READY)} / " +
+                        if (MediaIndex.remoteCount > 0) "${MediaIndex.remoteCount}"
+                        else "${MediaIndex.matchedCount}"
+                )
+            )
+            append(row("HEALTH", overallHealth()))
+        }
+
         findViewById<TextView>(R.id.value_start_url).text = prefs.startUrl
         findViewById<TextView>(R.id.value_network).text = networkMonitor.describe()
         findViewById<TextView>(R.id.value_webview).text = webViewVersion()
         findViewById<TextView>(R.id.value_app).text =
-            "${getString(R.string.app_name)} ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})"
+            "${getString(R.string.app_name)} ${BuildConfig.VERSION_NAME} " +
+                "(build ${BuildConfig.VERSION_CODE})"
         findViewById<TextView>(R.id.value_device).text =
-            "${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"
+            "${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE} " +
+                "(API ${Build.VERSION.SDK_INT})"
+
         findViewById<TextView>(R.id.value_media_folder).text =
-            MediaScanner.describe(prefs.mediaTreeUri)
+            MediaRepository.storageLabel(this)
         findViewById<TextView>(R.id.value_media_count).text = buildString {
-            append("${MediaIndex.matchedCount} local videos indexed")
-            append(" · ${MediaScanner.formatBytes(MediaIndex.totalBytes)}")
-            if (!MediaIndex.sourceAvailable) append(" · SOURCE UNAVAILABLE")
-            if (MediaIndex.lastScanAt > 0L) {
-                append(
-                    "\nLast scan " + SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
-                        .format(Date(MediaIndex.lastScanAt))
-                )
+            append("${MediaIndex.matchedCount} indexed")
+            append(" · ${MediaScanner.formatBytes(MediaIndex.totalBytes)} used")
+            MediaIndex.freeBytes?.let { append(" · ${MediaScanner.formatBytes(it)} free") }
+            if (prefs.storageMode == StorageMode.SAF) {
+                append("\nSAF permission: ${if (MediaIndex.permissionValid) "VALID" else "INVALID"}")
             }
+            if (!MediaIndex.sourceAvailable && prefs.storageMode != StorageMode.NONE) {
+                append(" · SOURCE UNAVAILABLE")
+            }
+            if (MediaIndex.lastScanAt > 0L) append("\nLast scan ${timeOf(MediaIndex.lastScanAt)}")
         }
+
+        findViewById<TextView>(R.id.value_manifest_url).text = prefs.manifestUrl
+        findViewById<TextView>(R.id.value_sync_state).text = buildString {
+            append("Library version: ")
+            append(MediaIndex.manifest?.libraryVersion?.toString() ?: "unknown")
+            append(" · remote entries ${MediaIndex.remoteCount}")
+            append("\nMissing ${res.count(MediaState.MISSING)}")
+            append(" · updates ${res.count(MediaState.UPDATE_AVAILABLE)}")
+            append(" · failed ${res.count(MediaState.FAILED)}")
+            append("\nLast sync ${timeOf(MediaIndex.lastSyncAt)}")
+            if (!prefs.autoSync) append("\nAuto-sync is OFF - use SYNC NOW")
+        }
+
         findViewById<TextView>(R.id.value_notice).text =
-            "The Lovable web application owns the playlist, ordering and UI. " +
-                "This shell only provides kiosk behaviour, the remote, local media and recovery.\n\n" +
-                "Publish in Lovable and the TV picks the change up on the next reload - " +
-                "no new APK needed."
+            "Lovable owns the playlist, ordering, presentation and timing. This shell provides " +
+                "kiosk behaviour, the remote, local media and recovery.\n\n" +
+                "Publishing in Lovable updates the TV on the next reload, and new videos arrive " +
+                "through the media manifest - neither needs a new APK."
     }
+
+    private fun storageHealth(): String = when {
+        prefs.storageMode == StorageMode.NONE -> "NOT SET UP"
+        !MediaIndex.sourceAvailable -> "MISSING"
+        else -> "READY"
+    }
+
+    private fun overallHealth(): String {
+        val res = MediaIndex.resolution()
+        val error = !MainActivity.bridgeReady ||
+            res.count(MediaState.FAILED) > 0 ||
+            (prefs.storageMode != StorageMode.NONE && !MediaIndex.sourceAvailable)
+        val attention = res.count(MediaState.MISSING) > 0 ||
+            res.count(MediaState.UPDATE_AVAILABLE) > 0 ||
+            MediaRepository.lowStorage() ||
+            prefs.storageMode == StorageMode.NONE
+        return when {
+            error -> "ERROR"
+            attention -> "ATTENTION"
+            else -> "GOOD"
+        }
+    }
+
+    private fun row(label: String, value: String): String = label.padEnd(16) + value
+
+    private fun timeOf(millis: Long): String =
+        if (millis <= 0L) "never"
+        else SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(Date(millis))
 
     private fun webViewVersion(): String = runCatching {
         val pkg = WebViewCompat.getCurrentWebViewPackage(this)
-        if (pkg == null) "Unknown WebView provider"
-        else "${pkg.packageName} ${pkg.versionName}"
+        if (pkg == null) "Unknown WebView provider" else "${pkg.packageName} ${pkg.versionName}"
     }.getOrElse { "Unavailable" }
 
-    private fun launchFolderPicker() {
-        try {
-            folderPicker.launch(null)
-        } catch (t: Throwable) {
-            Log.e(Constants.LOG, "No SAF picker on this device", t)
-            toast("This TV has no document picker. Copy videos to internal storage instead.")
-        }
-    }
+    // ---------------------------------------------------------------- dialogs
 
     private fun promptStartUrl() {
+        promptUrl(
+            title = getString(R.string.action_change_url),
+            current = prefs.startUrl,
+            restrictToAllowedHosts = true,
+            onReset = { prefs.resetStartUrl() },
+            onAccepted = { prefs.startUrl = it }
+        )
+    }
+
+    private fun promptManifestUrl() {
+        promptUrl(
+            title = getString(R.string.action_manifest_url),
+            current = prefs.manifestUrl,
+            restrictToAllowedHosts = true,
+            onReset = { prefs.resetManifestUrl() },
+            onAccepted = {
+                prefs.manifestUrl = it
+                prefs.localLibraryVersion = -1L
+                MediaRepository.syncNow(this, force = true) { render() }
+            }
+        )
+    }
+
+    private fun promptUrl(
+        title: String,
+        current: String,
+        restrictToAllowedHosts: Boolean,
+        onReset: () -> Unit,
+        onAccepted: (String) -> Unit
+    ) {
         val input = EditText(this).apply {
-            setText(prefs.startUrl)
+            setText(current)
             setTextColor(getColor(R.color.noga_text))
             setPadding(32, 24, 32, 24)
         }
         AlertDialog.Builder(this, R.style.Theme_NogaMT_Dialog)
-            .setTitle(R.string.action_change_url)
+            .setTitle(title)
             .setView(input)
             .setNeutralButton(R.string.action_reset_url) { _, _ ->
-                prefs.resetStartUrl()
+                onReset()
                 render()
-                toast("Start URL reset")
+                toast("Reset to default")
             }
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 val value = input.text.toString().trim()
                 val host = runCatching { Uri.parse(value).host }.getOrNull()
                 when {
-                    !value.startsWith("https://") ->
-                        toast("Start URL must use https")
-                    !Patterns.WEB_URL.matcher(value).matches() ->
-                        toast("That does not look like a URL")
-                    !Constants.isAllowedHost(host) ->
-                        toast("Host not allowed. Permitted: ${Constants.ALLOWED_HOSTS.joinToString()}")
+                    !value.startsWith("https://") -> toast("The URL must use https")
+                    !Patterns.WEB_URL.matcher(value).matches() -> toast("That is not a URL")
+                    restrictToAllowedHosts && !Constants.isAllowedHost(host) ->
+                        toast("Host not allowed: ${Constants.ALLOWED_HOSTS.joinToString()}")
                     else -> {
-                        prefs.startUrl = value
+                        onAccepted(value)
                         render()
-                        toast("Start URL updated")
+                        toast("Updated")
                     }
                 }
             }
@@ -229,9 +326,22 @@ class StaffSettingsActivity : AppCompatActivity() {
         finish()
     }
 
+    // ---------------------------------------------------------------- lifecycle
+
     override fun onResume() {
         super.onResume()
+        SyncEngine.addListener(this)
+        MediaRepository.verifySourceAvailability(this) { render() }
         render()
+    }
+
+    override fun onPause() {
+        SyncEngine.removeListener(this)
+        super.onPause()
+    }
+
+    override fun onSyncProgress(progress: SyncProgress) {
+        runOnUiThread { render() }
     }
 
     // BACK on a staff screen simply returns to the showroom.

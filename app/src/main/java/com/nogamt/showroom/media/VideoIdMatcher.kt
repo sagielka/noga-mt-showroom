@@ -7,15 +7,25 @@ package com.nogamt.showroom.media
  *  1. YouTube id in square brackets anywhere in the name -> "... [N-mTagRbXuM].mp4"
  *  2. YouTube id at the very end of the name            -> "...-N-mTagRbXuM.mp4"
  *  3. The whole base name is itself a valid id          -> "N-mTagRbXuM.mp4"
+ *  4. Stable filename identity for local-only media     -> "bear-mascot.mp4"
  *
- * Anything else is reported as UNMATCHED but still indexed under its file name so
- * exact-file-name lookups from the web app keep working.
+ * Anything else (names with spaces or unusual punctuation) is reported as UNMATCHED but is
+ * still indexed under its file name, so exact-file-name lookups from the web app keep working
+ * and the staff screen can flag the file for renaming.
  */
 object VideoIdMatcher {
 
     private val BRACKET_ID = Regex("\\[([A-Za-z0-9_-]{11})]")
     private val TRAILING_ID = Regex("[-_. ]([A-Za-z0-9_-]{11})$")
     private val PLAIN_ID = Regex("^[A-Za-z0-9_-]{11}$")
+
+    /**
+     * Rule 4 - stable filename identity for local-only media that has no YouTube id
+     * (the bear/mascot clip, product loops, anything added later). A slug-like base name
+     * with no spaces is used as the id verbatim. Names with spaces or punctuation stay
+     * UNMATCHED so the staff screen can still flag genuinely mis-named files.
+     */
+    private val STABLE_SLUG = Regex("^[A-Za-z0-9][A-Za-z0-9._-]{1,63}$")
 
     /** Ids/keys accepted from JavaScript. Deliberately narrow - no path characters. */
     private val SAFE_REQUEST_KEY = Regex("^[A-Za-z0-9 ._\\-]{1,160}$")
@@ -33,6 +43,7 @@ object VideoIdMatcher {
         BRACKET_ID.find(base)?.let { return Result(it.groupValues[1], MatchType.BRACKET_ID) }
         TRAILING_ID.find(base)?.let { return Result(it.groupValues[1], MatchType.SUFFIX_ID) }
         if (PLAIN_ID.matches(base)) return Result(base, MatchType.FILENAME_ID)
+        if (STABLE_SLUG.matches(base)) return Result(base, MatchType.FILENAME_ID)
         return null
     }
 

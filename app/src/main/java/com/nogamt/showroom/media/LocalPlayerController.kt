@@ -38,6 +38,9 @@ class LocalPlayerController(
     private var currentId: String? = null
     private var startedReported = false
 
+    /** Guarantees exactly one terminal event (ENDED | STOPPED | ERROR) per playback. */
+    private var terminalEmitted = false
+
     val isActive: Boolean get() = currentId != null
 
     private val listener = object : Player.Listener {
@@ -52,9 +55,12 @@ class LocalPlayerController(
                     }
                 }
                 Player.STATE_ENDED -> {
+                    // Real end-of-media from Media3 - never a timer.
                     Log.i(Constants.LOG, "Local video ended: $id")
+                    val emit = !terminalEmitted
+                    terminalEmitted = true
                     teardown()
-                    events.onLocalVideoEnded(id)
+                    if (emit) events.onLocalVideoEnded(id)
                 }
                 else -> Unit
             }
@@ -63,8 +69,10 @@ class LocalPlayerController(
         override fun onPlayerError(error: PlaybackException) {
             val id = currentId ?: "unknown"
             Log.e(Constants.LOG, "Local playback error for $id", error)
+            val emit = !terminalEmitted
+            terminalEmitted = true
             teardown()
-            events.onLocalVideoError(id, error.errorCodeName)
+            if (emit) events.onLocalVideoError(id, error.errorCodeName)
         }
     }
 
@@ -81,6 +89,7 @@ class LocalPlayerController(
 
             currentId = video.id
             startedReported = false
+            terminalEmitted = false
 
             exo.setMediaItem(MediaItem.fromUri(Uri.parse(video.uri)))
             exo.repeatMode = Player.REPEAT_MODE_OFF
@@ -91,8 +100,10 @@ class LocalPlayerController(
         } catch (t: Throwable) {
             Log.e(Constants.LOG, "Could not start local playback for ${video.id}", t)
             val id = video.id
+            val emit = !terminalEmitted
+            terminalEmitted = true
             teardown()
-            events.onLocalVideoError(id, t.message ?: "playback_failed")
+            if (emit) events.onLocalVideoError(id, t.message ?: "playback_failed")
             false
         }
     }
@@ -124,10 +135,10 @@ class LocalPlayerController(
 
     private fun stopInternal(notifyId: String?, notify: Boolean) {
         val hadPlayer = player != null
+        val emit = notify && notifyId != null && hadPlayer && !terminalEmitted
+        terminalEmitted = true
         teardown()
-        if (notify && notifyId != null && hadPlayer) {
-            events.onLocalVideoStopped(notifyId)
-        }
+        if (emit && notifyId != null) events.onLocalVideoStopped(notifyId)
     }
 
     /** Detaches and releases the player + surface without emitting events. */

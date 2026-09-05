@@ -67,6 +67,14 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
+                <TextView style="@style/NogaSectionLabel" android:text="@string/section_health" />
+                <TextView
+                    android:id="@+id/value_health"
+                    style="@style/NogaValue"
+                    android:fontFamily="monospace"
+                    android:lineSpacingExtra="3dp"
+                    android:textSize="16sp" />
+
                 <TextView style="@style/NogaSectionLabel" android:text="@string/section_webapp" />
                 <TextView android:id="@+id/value_start_url" style="@style/NogaValue" />
 
@@ -83,6 +91,10 @@
                 <TextView style="@style/NogaSectionLabel" android:text="@string/section_media" />
                 <TextView android:id="@+id/value_media_folder" style="@style/NogaValue" />
                 <TextView android:id="@+id/value_media_count" style="@style/NogaCaption" />
+
+                <TextView style="@style/NogaSectionLabel" android:text="@string/section_sync" />
+                <TextView android:id="@+id/value_manifest_url" style="@style/NogaValue" />
+                <TextView android:id="@+id/value_sync_state" style="@style/NogaCaption" />
 
                 <TextView
                     android:id="@+id/value_notice"
@@ -122,15 +134,32 @@
                     style="@style/NogaSwitch"
                     android:text="@string/label_recovery" />
 
+                <TextView style="@style/NogaSectionLabel" android:text="@string/section_sync" />
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switch_auto_sync"
+                    style="@style/NogaSwitch"
+                    android:text="@string/label_auto_sync" />
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switch_wifi_only"
+                    style="@style/NogaSwitch"
+                    android:text="@string/label_wifi_only" />
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switch_verify"
+                    style="@style/NogaSwitch"
+                    android:text="@string/label_verify" />
+
                 <TextView style="@style/NogaSectionLabel" android:text="@string/section_actions" />
+
+                <Button android:id="@+id/btn_sync_now" style="@style/NogaButton" android:text="@string/action_sync_now" />
 
                 <Button android:id="@+id/btn_reload" style="@style/NogaButton" android:text="@string/action_reload" />
                 <Button android:id="@+id/btn_force_refresh" style="@style/NogaButton" android:text="@string/action_force_refresh" />
-                <Button android:id="@+id/btn_select_folder" style="@style/NogaButton" android:text="@string/action_select_folder" />
+                <Button android:id="@+id/btn_change_storage" style="@style/NogaButton" android:text="@string/action_change_storage" />
                 <Button android:id="@+id/btn_rescan" style="@style/NogaButton" android:text="@string/action_rescan" />
                 <Button android:id="@+id/btn_media_manager" style="@style/NogaButton" android:text="@string/media_manager_title" />
                 <Button android:id="@+id/btn_clear_cache" style="@style/NogaButton" android:text="@string/action_clear_cache" />
                 <Button android:id="@+id/btn_change_url" style="@style/NogaButton" android:text="@string/action_change_url" />
+                <Button android:id="@+id/btn_manifest_url" style="@style/NogaButton" android:text="@string/action_manifest_url" />
                 <Button android:id="@+id/btn_network_settings" style="@style/NogaButton" android:text="@string/action_network_settings" />
                 <Button android:id="@+id/btn_return" style="@style/NogaButton" android:text="@string/action_return" />
             </LinearLayout>

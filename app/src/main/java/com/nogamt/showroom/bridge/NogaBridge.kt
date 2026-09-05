@@ -34,20 +34,28 @@ class NogaBridge(host: BridgeHost) {
     @JavascriptInterface
     fun getAppVersion(): String = BuildConfig.VERSION_NAME
 
+    /**
+     * True only when the id is indexed, the storage source is present, and the file is
+     * really readable right now. A pulled USB drive turns this false within seconds.
+     */
     @JavascriptInterface
     fun hasLocalVideo(videoId: String?): Boolean {
         if (!VideoIdMatcher.isSafeRequestKey(videoId)) return false
-        val found = MediaIndex.find(videoId!!) != null
-        if (!found) MediaIndex.noteMiss(videoId)
-        return found && MediaIndex.sourceAvailable
+        val id = videoId!!
+        val playable = MediaIndex.isPlayable(id)
+        if (!playable) MediaIndex.noteMiss(id)
+        return playable
     }
 
     @JavascriptInterface
     fun getLocalVideoInfo(videoId: String?): String? {
         if (!VideoIdMatcher.isSafeRequestKey(videoId)) return null
         val video = MediaIndex.find(videoId!!) ?: return null
-        // Note: toJson() deliberately omits the URI.
-        return video.toJson().put("available", MediaIndex.sourceAvailable).toString()
+        // Note: toJson() deliberately omits the URI and any filesystem path.
+        return video.toJson()
+            .put("available", MediaIndex.isPlayable(videoId))
+            .put("state", MediaIndex.stateOf(video.id).name)
+            .toString()
     }
 
     @JavascriptInterface
@@ -60,10 +68,12 @@ class NogaBridge(host: BridgeHost) {
             return false
         }
         val id = videoId!!
-        if (MediaIndex.find(id) == null || !MediaIndex.sourceAvailable) {
+        if (!MediaIndex.isPlayable(id)) {
             MediaIndex.noteMiss(id)
+            Log.i(Constants.LOG, "playLocalVideo($id) -> unavailable, web app should fall back")
             return false
         }
+        Log.i(Constants.LOG, "playLocalVideo($id) -> accepted")
         // Optimistic: the real result is reported through the started/error events.
         main.post { host()?.bridgePlayLocalVideo(id) }
         return true
@@ -71,6 +81,7 @@ class NogaBridge(host: BridgeHost) {
 
     @JavascriptInterface
     fun stopLocalVideo() {
+        Log.i(Constants.LOG, "stopLocalVideo()")
         main.post { host()?.bridgeStopLocalVideo() }
     }
 
@@ -89,6 +100,7 @@ class NogaBridge(host: BridgeHost) {
 
     @JavascriptInterface
     fun refreshLocalMediaIndex() {
+        Log.i(Constants.LOG, "refreshLocalMediaIndex()")
         main.post { host()?.bridgeRefreshMediaIndex() }
     }
 
@@ -104,6 +116,7 @@ class NogaBridge(host: BridgeHost) {
                 if (VideoIdMatcher.isSafeRequestKey(id)) ids.add(id)
             }
             MediaIndex.reportPlaylist(ids)
+            Log.i(Constants.LOG, "reportPlaylist(${ids.size} ids)")
         }.onFailure { Log.w(Constants.LOG, "reportPlaylist ignored malformed payload") }
     }
 
